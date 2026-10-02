@@ -16,7 +16,7 @@ SDMX API, so the deployment needs no database, no persistent volume and no cloud
 | Service | `ClusterIP:8000` | `PORT` in the container follows `service.port` |
 | HorizontalPodAutoscaler | enabled | CPU target 80 %, 1–3 replicas |
 | PodDisruptionBudget | enabled | `minAvailable: 1` |
-| NetworkPolicy | enabled | ingress from listed namespaces (+ Gateway namespace), egress DNS + TCP 443 |
+| NetworkPolicy | enabled | ingress from the chart namespace only, or from `ingressNamespaces` / Gateway namespace / `ingressCIDRs`; egress DNS + TCP 443 |
 | Gateway API `HTTPRoute` (+ optional `Gateway`, HTTP→HTTPS redirect) | disabled | `gateway.enabled` |
 | `GCPBackendPolicy`, `HealthCheckPolicy` | disabled | GKE only |
 | Secret or `SecretStore` + `ExternalSecret` | only with `auth.enabled` | bearer token for `/mcp` |
@@ -44,7 +44,9 @@ Smoke test from the cluster:
 ```bash
 kubectl -n istat-mcp port-forward svc/istat-istat-mcp-server 8000:8000
 curl http://localhost:8000/health          # {"status":"ok"}
-# MCP streamable-HTTP endpoint (trailing slash required; /mcp redirects with 307)
+# MCP streamable-HTTP endpoint (trailing slash required; /mcp redirects with 307).
+# The host runs in stateless mode: every request is self-contained, so no initialize
+# handshake is needed before tools/list.
 curl -X POST http://localhost:8000/mcp/ -H 'Content-Type: application/json' \
   -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
@@ -73,7 +75,8 @@ Gateway. The HTTP listener only serves the 301 redirect route (`httpsRedirect`).
 `Authorization: Bearer <token>` on `/mcp` (`/health` stays open). The Secret comes from:
 
 - a plain `Secret` rendered from `externalSecrets.secrets.token.plaintext` when
-  `externalSecrets.enabled: false` (pass the value with `--set` or an untracked values file);
+  `externalSecrets.enabled: false` (pass the value with `--set` or an untracked values file;
+  an empty value makes `helm template` fail and the server refuses to start with an empty token);
 - an `ExternalSecret` synced from Vault when `externalSecrets.enabled: true`
   (`externalSecrets.vault.*` describes the Kubernetes-auth `SecretStore`).
 
@@ -100,6 +103,7 @@ See `values.yaml`; every key is documented inline. The most relevant ones:
 | `service.type` / `service.port` | `ClusterIP` / `8000` | Service exposure |
 | `autoscaling.*`, `podDisruptionBudget.*` | enabled | availability settings |
 | `networkPolicy.ingressNamespaces` | `[]` | namespaces allowed to reach the pod |
+| `networkPolicy.ingressCIDRs` | `[]` | CIDRs allowed to reach the pod (e.g. cloud LB ranges for GKE Gateway) |
 | `networkPolicy.egressPorts` | `[443]` | allowed egress TCP ports |
 | `auth.enabled` | `false` | bearer auth on `/mcp` |
 | `gateway.enabled` / `gateway.create` | `false` / `false` | Gateway API exposure |

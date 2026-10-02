@@ -8,7 +8,8 @@ can run as a long-lived network service, for example in Kubernetes:
 * ``/health`` liveness/readiness endpoint, always unauthenticated.
 
 Optional bearer authentication: when ``MCP_ISTAT_TOKEN`` is set, requests to ``/mcp`` must
-carry ``Authorization: Bearer <token>``. The check runs at the ASGI layer instead of a
+carry ``Authorization: Bearer <token>``. An empty value is a configuration error and aborts
+startup, so a misconfigured deployment never runs unauthenticated by accident. The check runs at the ASGI layer instead of a
 ``BaseHTTPMiddleware`` because the latter buffers the body and breaks SSE streaming.
 
 Run with ``istat-mcp-http`` (console script) or ``python -m istat_mcp_server.http_server``.
@@ -36,7 +37,12 @@ logger = logging.getLogger(__name__)
 
 MCP_PATH = "/mcp"
 HEALTH_PATH = "/health"
-MCP_TOKEN = os.environ.get("MCP_ISTAT_TOKEN") or None
+TOKEN_ENV = os.environ.get("MCP_ISTAT_TOKEN")
+if TOKEN_ENV is not None and not TOKEN_ENV.strip():
+    raise SystemExit(
+        "MCP_ISTAT_TOKEN is set but empty: provide a token, or unset it to run without authentication"
+    )
+MCP_TOKEN = TOKEN_ENV or None
 
 
 def _authorized(scope: Scope) -> bool:

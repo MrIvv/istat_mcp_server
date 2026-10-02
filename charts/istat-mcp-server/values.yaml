@@ -72,11 +72,15 @@ service:
   loadBalancerIP: ""
   # externalTrafficPolicy: Local
 
-# Ingress is allowed only from the listed namespaces (plus the Gateway namespace when
-# gateway.enabled). Egress is limited to DNS and the listed TCP ports (443 = ISTAT SDMX API).
+# Ingress is allowed only from explicit peers: ingressNamespaces, the Gateway namespace (when
+# gateway.enabled, for in-cluster gateway proxies) and ingressCIDRs (for proxies outside the
+# cluster, e.g. GKE Gateway / Google Cloud load balancers: 130.211.0.0/22 and 35.191.0.0/16).
+# With no peers configured, only pods in the chart namespace can reach the service.
+# Egress is limited to DNS and the listed TCP ports (443 = ISTAT SDMX API).
 networkPolicy:
   enabled: true
   ingressNamespaces: []
+  ingressCIDRs: []
   egressPorts: [443]
   egressMetadata: false      # also allow the cloud metadata endpoint 169.254.169.254
 
