@@ -27,10 +27,13 @@ serviceAccount:
   annotations: {}
 
 replicaCount: 1
+# One replica by default: the ISTAT SDMX API rate-limits by source IP, and the client limiter
+# (4 calls/minute) and the cache are per process. N replicas behind the same egress IP make up
+# to N times the calls and risk an IP block. Raise maxReplicas only with distinct egress IPs.
 autoscaling:
   enabled: true
   minReplicas: 1
-  maxReplicas: 3
+  maxReplicas: 1
   targetCPUUtilizationPercentage: 80
   # targetMemoryUtilizationPercentage: 80
 podDisruptionBudget:
@@ -75,6 +78,8 @@ service:
 # Ingress is allowed only from explicit peers: ingressNamespaces, the Gateway namespace (when
 # gateway.enabled, for in-cluster gateway proxies) and ingressCIDRs (for proxies outside the
 # cluster, e.g. GKE Gateway / Google Cloud load balancers: 130.211.0.0/22 and 35.191.0.0/16).
+# If the gateway proxy runs in a namespace other than the Gateway resource (e.g. an Istio
+# ingress gateway in istio-system), add that namespace to ingressNamespaces.
 # With no peers configured, only pods in the chart namespace can reach the service.
 # Egress is limited to DNS and the listed TCP ports (443 = ISTAT SDMX API).
 networkPolicy:

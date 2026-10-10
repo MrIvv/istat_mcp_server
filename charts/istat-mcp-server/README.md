@@ -14,7 +14,7 @@ SDMX API, so the deployment needs no database, no persistent volume and no cloud
 |---|---|---|
 | Deployment | always | non-root, read-only root filesystem, `/tmp` emptyDir for logs and cache |
 | Service | `ClusterIP:8000` | `PORT` in the container follows `service.port` |
-| HorizontalPodAutoscaler | enabled | CPU target 80 %, 1–3 replicas |
+| HorizontalPodAutoscaler | enabled | CPU target 80 %, 1 replica (ISTAT rate-limits by IP, see `values.yaml`) |
 | PodDisruptionBudget | enabled | `minAvailable: 1` |
 | NetworkPolicy | enabled | ingress from the chart namespace only, or from `ingressNamespaces` / Gateway namespace / `ingressCIDRs`; egress DNS + TCP 443 |
 | Gateway API `HTTPRoute` (+ optional `Gateway`, HTTP→HTTPS redirect) | disabled | `gateway.enabled` |
@@ -102,7 +102,7 @@ See `values.yaml`; every key is documented inline. The most relevant ones:
 | `namespace` | release namespace | target namespace |
 | `service.type` / `service.port` | `ClusterIP` / `8000` | Service exposure |
 | `autoscaling.*`, `podDisruptionBudget.*` | enabled | availability settings |
-| `networkPolicy.ingressNamespaces` | `[]` | namespaces allowed to reach the pod |
+| `networkPolicy.ingressNamespaces` | `[]` | namespaces allowed to reach the pod; include the gateway proxy namespace if it differs from the Gateway's |
 | `networkPolicy.ingressCIDRs` | `[]` | CIDRs allowed to reach the pod (e.g. cloud LB ranges for GKE Gateway) |
 | `networkPolicy.egressPorts` | `[443]` | allowed egress TCP ports |
 | `auth.enabled` | `false` | bearer auth on `/mcp` |

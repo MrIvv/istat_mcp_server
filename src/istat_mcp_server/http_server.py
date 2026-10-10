@@ -19,6 +19,7 @@ Requires the ``http`` extra: ``pip install "istat-mcp-server[http]"``.
 from __future__ import annotations
 
 import contextlib
+import hmac
 import logging
 import os
 from collections.abc import AsyncIterator
@@ -49,7 +50,7 @@ def _authorized(scope: Scope) -> bool:
     if not MCP_TOKEN:
         return True
     headers = dict(scope.get("headers") or [])
-    return headers.get(b"authorization", b"").decode() == f"Bearer {MCP_TOKEN}"
+    return hmac.compare_digest(headers.get(b"authorization", b""), f"Bearer {MCP_TOKEN}".encode())
 
 
 # Stateless mode: every request is self-contained, no server-side session store, so any
