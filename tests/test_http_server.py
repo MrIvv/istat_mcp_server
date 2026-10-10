@@ -1,6 +1,7 @@
 """Tests for the streamable-HTTP host (auth and health endpoints)."""
 
 import importlib
+import logging
 
 import pytest
 
@@ -14,6 +15,20 @@ MCP_HEADERS = {
     'Accept': 'application/json, text/event-stream',
 }
 TOOLS_LIST = {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list'}
+
+
+@pytest.fixture(autouse=True)
+def _isolate_logging(monkeypatch, tmp_path):
+    """Each reload runs create_server(), which adds file/console handlers to the root logger:
+    log to tmp_path and close the handlers the test added."""
+    monkeypatch.setattr('istat_mcp_server.server.LOG_DIR', str(tmp_path))
+    root = logging.getLogger()
+    before = list(root.handlers)
+    yield
+    for handler in root.handlers[:]:
+        if handler not in before:
+            root.removeHandler(handler)
+            handler.close()
 
 
 def _load(monkeypatch, token):
